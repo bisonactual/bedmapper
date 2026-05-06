@@ -54,6 +54,7 @@ if [ "$platform" = "Darwin" ]; then
   mkdir -p "$resource_dir/lib"
   dylibbundler \
     -od \
+    -b \
     -x "$resource_dir/$exe_name" \
     -d "$resource_dir/lib" \
     -p "@loader_path/lib/"
