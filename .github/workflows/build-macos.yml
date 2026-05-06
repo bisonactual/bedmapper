@@ -48,23 +48,50 @@ jobs:
             -DOpenCV_DIR="$(brew --prefix opencv)/lib/cmake/opencv4"
           cmake --build src-native/bedmapper-vision/build
 
-      - name: Bundle vision sidecar resources
+      - name: Inspect vision sidecar linkage
         run: |
-          rm -rf src-tauri/resources/vision
-          mkdir -p src-tauri/resources/vision/lib
-          cp src-native/bedmapper-vision/build/bedmapper-vision src-tauri/resources/vision/
-          dylibbundler \
-            -od \
-            -x src-tauri/resources/vision/bedmapper-vision \
-            -d src-tauri/resources/vision/lib \
-            -p "@loader_path/lib/"
-          chmod +x src-tauri/resources/vision/bedmapper-vision
+          ls -lh src-native/bedmapper-vision/build/bedmapper-vision
+          otool -L src-native/bedmapper-vision/build/bedmapper-vision
 
       - name: Install Tauri CLI
         run: cargo install tauri-cli --version "^2.0.0" --locked
 
       - name: Build Tauri app
         run: cargo tauri build --target "${{ matrix.rust_target }}"
+
+      - name: Verify macOS bundle
+        run: |
+          app_path="$(find "target/${{ matrix.rust_target }}/release/bundle/macos" -maxdepth 1 -type d -name '*.app' | head -n 1)"
+          if [ -z "$app_path" ]; then
+            echo "No .app bundle found" >&2
+            exit 1
+          fi
+
+          vision_dir="$app_path/Contents/Resources/resources/vision"
+          sidecar="$vision_dir/bedmapper-vision"
+          test -x "$sidecar"
+          test -d "$vision_dir/lib"
+
+          echo "Packaged vision files:"
+          find "$vision_dir" -maxdepth 3 -type f -print -exec ls -lh {} \;
+
+          dylib_count="$(find "$vision_dir/lib" -type f -name '*.dylib' | wc -l | tr -d ' ')"
+          if [ "$dylib_count" = "0" ]; then
+            echo "No OpenCV dylibs were bundled into $vision_dir/lib" >&2
+            exit 1
+          fi
+
+          echo "Packaged sidecar linkage:"
+          otool -L "$sidecar"
+
+          for binary in "$sidecar" "$vision_dir"/lib/*.dylib; do
+            if otool -L "$binary" | grep -E '/(opt/homebrew|usr/local)/(Cellar|opt)/'; then
+              echo "Bundle still links to Homebrew path: $binary" >&2
+              exit 1
+            fi
+          done
+
+          echo "Verified $dylib_count bundled dylib(s)"
 
       - name: Upload macOS artifacts
         uses: actions/upload-artifact@v5

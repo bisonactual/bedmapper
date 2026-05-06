@@ -1,14 +1,20 @@
 {
   "productName": "Bedmapper",
   "version": "0.1.0",
-  "identifier": "com.bedmapper.app",
+  "identifier": "com.bisonactual.bedmapper",
   "build": {
     "frontendDist": "../src-ui/dist",
     "beforeDevCommand": "",
-    "beforeBuildCommand": ""
+    "beforeBuildCommand": "",
+    "beforeBundleCommand": {
+      "script": "sh ../scripts/stage-vision-sidecar.sh"
+    }
   },
   "bundle": {
     "active": true,
+    "icon": [
+      "icons/icon.png"
+    ],
     "resources": [
       "resources/vision"
     ]
