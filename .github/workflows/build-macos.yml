@@ -54,10 +54,10 @@ jobs:
           otool -L src-native/bedmapper-vision/build/bedmapper-vision
 
       - name: Install Tauri CLI
-        run: cargo install tauri-cli --version "^2.0.0" --locked
+        run: npm install --global "@tauri-apps/cli@^2.0.0"
 
       - name: Build Tauri app
-        run: cargo tauri build --target "${{ matrix.rust_target }}"
+        run: tauri build --target "${{ matrix.rust_target }}"
 
       - name: Verify macOS bundle
         run: |
