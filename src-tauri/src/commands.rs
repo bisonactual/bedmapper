@@ -19,7 +19,9 @@ pub async fn list_camera_backends() -> Result<Vec<BackendInfo>, String> {
             name: "opencv-dshow".to_string(),
             available: true,
             platform: std::env::consts::OS.to_string(),
-            description: "OpenCV through Windows DirectShow. Current default for this Arducam UVC camera.".to_string(),
+            description:
+                "OpenCV through Windows DirectShow. Current default for this Arducam UVC camera."
+                    .to_string(),
         });
         backends.push(BackendInfo {
             name: "opencv-msmf".to_string(),
@@ -31,7 +33,8 @@ pub async fn list_camera_backends() -> Result<Vec<BackendInfo>, String> {
             name: "arducam-sdk".to_string(),
             available: false,
             platform: std::env::consts::OS.to_string(),
-            description: "Arducam vendor SDK is not installed/configured for this build.".to_string(),
+            description: "Arducam vendor SDK is not installed/configured for this build."
+                .to_string(),
         });
     } else {
         backends.push(BackendInfo {

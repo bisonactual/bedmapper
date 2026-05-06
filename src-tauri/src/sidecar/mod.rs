@@ -120,7 +120,7 @@ impl VisionSidecar {
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
             .stderr(Stdio::null());
-        configure_sidecar_env(&mut command);
+        configure_sidecar_env(&mut command, sidecar_path.parent());
         hide_sidecar_window(&mut command);
 
         let mut child = command
@@ -253,7 +253,7 @@ fn call_sidecar(request: &Value) -> Result<Value, String> {
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped());
-    configure_sidecar_env(&mut command);
+    configure_sidecar_env(&mut command, sidecar_path.parent());
     hide_sidecar_window(&mut command);
 
     let mut child = command
@@ -322,8 +322,12 @@ fn hide_sidecar_window(command: &mut Command) {
 #[cfg(not(windows))]
 fn hide_sidecar_window(_command: &mut Command) {}
 
-fn configure_sidecar_env(command: &mut Command) {
+fn configure_sidecar_env(command: &mut Command, sidecar_dir: Option<&std::path::Path>) {
     let mut library_paths = Vec::new();
+    if let Some(sidecar_dir) = sidecar_dir {
+        library_paths.push(sidecar_dir.to_path_buf());
+        library_paths.push(sidecar_dir.join("lib"));
+    }
 
     if let Ok(vcpkg_root) = std::env::var("VCPKG_ROOT") {
         library_paths.push(PathBuf::from(vcpkg_root).join("installed/x64-windows/bin"));
@@ -334,13 +338,33 @@ fn configure_sidecar_env(command: &mut Command) {
 
     let existing_path = std::env::var_os("PATH").unwrap_or_default();
     let mut paths: Vec<PathBuf> = std::env::split_paths(&existing_path).collect();
-    for path in library_paths {
-        if path.exists() && !paths.iter().any(|existing| existing == &path) {
-            paths.insert(0, path);
+    for path in &library_paths {
+        if path.exists() && !paths.iter().any(|existing| existing == path) {
+            paths.insert(0, path.clone());
         }
     }
     if let Ok(joined) = std::env::join_paths(paths) {
         command.env("PATH", joined);
+    }
+
+    #[cfg(target_os = "linux")]
+    prepend_library_path(command, "LD_LIBRARY_PATH", &library_paths);
+
+    #[cfg(target_os = "macos")]
+    prepend_library_path(command, "DYLD_LIBRARY_PATH", &library_paths);
+}
+
+#[cfg(any(target_os = "linux", target_os = "macos"))]
+fn prepend_library_path(command: &mut Command, key: &str, library_paths: &[PathBuf]) {
+    let existing = std::env::var_os(key).unwrap_or_default();
+    let mut paths: Vec<PathBuf> = std::env::split_paths(&existing).collect();
+    for path in library_paths.iter().rev() {
+        if path.exists() && !paths.iter().any(|existing| existing == path) {
+            paths.insert(0, path.clone());
+        }
+    }
+    if let Ok(joined) = std::env::join_paths(paths) {
+        command.env(key, joined);
     }
 }
 
@@ -361,6 +385,11 @@ fn find_sidecar() -> Result<PathBuf, String> {
     if let Ok(current_exe) = std::env::current_exe() {
         if let Some(dir) = current_exe.parent() {
             candidates.push(dir.join(exe_name));
+            candidates.push(dir.join("resources").join("vision").join(exe_name));
+            candidates.push(dir.join("vision").join(exe_name));
+            candidates.push(dir.join("../resources/vision").join(exe_name));
+            candidates.push(dir.join("../Resources/resources/vision").join(exe_name));
+            candidates.push(dir.join("../Resources/vision").join(exe_name));
         }
     }
     if let Ok(cwd) = std::env::current_dir() {

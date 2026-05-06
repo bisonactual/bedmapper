@@ -51,14 +51,13 @@ jobs:
       - name: Bundle vision sidecar resources
         run: |
           rm -rf src-tauri/resources/vision
-          mkdir -p src-tauri/resources/vision
+          mkdir -p src-tauri/resources/vision/lib
           cp src-native/bedmapper-vision/build/bedmapper-vision src-tauri/resources/vision/
           dylibbundler \
             -od \
-            -b \
             -x src-tauri/resources/vision/bedmapper-vision \
-            -d src-tauri/resources/vision \
-            -p "@executable_path/"
+            -d src-tauri/resources/vision/lib \
+            -p "@loader_path/lib/"
           chmod +x src-tauri/resources/vision/bedmapper-vision
 
       - name: Install Tauri CLI
