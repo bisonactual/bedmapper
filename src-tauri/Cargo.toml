@@ -1,0 +1,37 @@
+[package]
+name = "bedmapper"
+version = "0.1.0"
+edition = "2021"
+description = "Cross-platform CNC bed mapping application"
+license = "MIT"
+
+[lib]
+name = "bedmapper_desktop"
+path = "src/lib.rs"
+
+[[bin]]
+name = "bedmapper"
+path = "src/main.rs"
+
+[features]
+default = []
+arducam = []
+
+[dependencies]
+tauri = { version = "2", features = ["unstable"] }
+tauri-build = { version = "2", features = [] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tokio = { version = "1", features = ["full"] }
+tokio-tungstenite = "0.24"
+futures-util = "0.3"
+chrono = { version = "0.4", features = ["serde"] }
+uuid = { version = "1", features = ["v4", "serde"] }
+dirs = "5"
+base64 = "0.22"
+
+[dev-dependencies]
+proptest = "1"
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }

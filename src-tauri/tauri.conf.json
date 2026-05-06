@@ -1,0 +1,30 @@
+{
+  "productName": "Bedmapper",
+  "version": "0.1.0",
+  "identifier": "com.bedmapper.app",
+  "build": {
+    "frontendDist": "../src-ui/dist",
+    "beforeDevCommand": "",
+    "beforeBuildCommand": ""
+  },
+  "bundle": {
+    "active": true,
+    "resources": [
+      "resources/vision"
+    ]
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "Bedmapper",
+        "width": 1280,
+        "height": 800,
+        "resizable": true,
+        "fullscreen": false
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  }
+}

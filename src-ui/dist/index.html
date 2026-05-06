@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bedmapper</title>
+  <link rel="stylesheet" href="style.css" />
+  <script src="three.min.js"></script>
+</head>
+<body>
+  <div id="app">
+    <nav id="stepper">
+      <div class="step active" data-step="camera">
+        <span class="step-dot">●</span><span class="step-label">Camera</span>
+      </div>
+      <div class="step" data-step="tramming">
+        <span class="step-dot">○</span><span class="step-label">Tramming</span>
+      </div>
+      <div class="step" data-step="board">
+        <span class="step-dot">○</span><span class="step-label">ChArUco Generation</span>
+      </div>
+      <div class="step" data-step="intrinsics">
+        <span class="step-dot">○</span><span class="step-label">Calibrate</span>
+      </div>
+      <div class="step" data-step="bed">
+        <span class="step-dot">○</span><span class="step-label">Bed</span>
+      </div>
+      <div class="step" data-step="test">
+        <span class="step-dot">○</span><span class="step-label">Test</span>
+      </div>
+      <div class="step" data-step="scan">
+        <span class="step-dot">○</span><span class="step-label">Scan</span>
+      </div>
+    </nav>
+    <main id="content">
+      <!-- Camera Setup -->
+      <section id="page-camera" class="page active">
+        <h2>Camera Setup</h2>
+        <div class="row">
+          <div class="col">
+            <div class="field-group">
+              <label>Backend</label>
+              <select id="backendSelect"><option value="opencv-sidecar">Native Vision Sidecar</option></select>
+            </div>
+            <div class="field-group">
+              <label>Device</label>
+              <select id="cameraSelect"><option value="">— select —</option></select>
+              <button id="refreshCamBtn" class="btn-sm">↻</button>
+            </div>
+            <div class="field-group">
+              <label>Resolution</label>
+              <select id="resolutionSelect">
+                <option value="4656x3496">4656×3496 (16MP)</option>
+                <option value="3840x2160">3840×2160 (4K)</option>
+                <option value="1920x1080" selected>1920×1080 (1080p)</option>
+                <option value="1280x720">1280×720 (720p)</option>
+                <option value="640x480">640×480 (VGA)</option>
+              </select>
+            </div>
+            <div class="field-group">
+              <label>Format</label>
+              <select id="formatSelect"><option>MJPG</option><option>YUYV</option></select>
+            </div>
+            <div class="field-group">
+              <label>FPS</label>
+              <select id="fpsSelect">
+                <option value="30" selected>30 fps</option>
+                <option value="15">15 fps</option>
+                <option value="10">10 fps</option>
+                <option value="5">5 fps</option>
+              </select>
+            </div>
+            <button id="openCamBtn" class="btn">Open Camera</button>
+            <button id="refreshAfBtn" class="btn" disabled>Autofocus Enable & Refresh</button>
+            <button id="closeCamBtn" class="btn" disabled>Close</button>
+          </div>
+          <div class="col preview-col">
+            <div id="previewWrap" class="preview-wrap">
+              <img id="previewImg" />
+              <div id="previewOff">Camera off</div>
+            </div>
+          </div>
+        </div>
+        <div id="controlsPanel" class="controls-panel"></div>
+      </section>
+
+      <!-- Tramming -->
+      <section id="page-tramming" class="page">
+        <h2>Camera Tramming</h2>
+        <p>Align your camera so the bed edges are parallel to the grid lines. Use the crosshair to centre the camera over the bed.</p>
+        <div class="preview-wrap" id="tramPreviewWrap">
+          <img id="tramPreview" />
+          <canvas id="tramCanvas"></canvas>
+        </div>
+        <div class="row">
+          <label><input type="checkbox" id="showGrid" checked /> Show grid overlay</label>
+          <label><input type="checkbox" id="showCrosshair" checked /> Show crosshair</label>
+          <div class="field-group" style="width:150px">
+            <label>Grid divisions</label>
+            <input id="gridDivisions" type="number" value="20" min="4" max="40" />
+          </div>
+        </div>
+        <div id="tramFeedback" class="feedback-panel">
+          <p>Adjust your camera mount so the bed edges align with the grid lines and the crosshair is centred on the bed.</p>
+        </div>
+        <button id="confirmTramBtn" class="btn">Confirm Tramming ✓</button>
+        <button id="printTramTarget" class="btn">Print Calibration Sheet</button>
+      </section>
+
+      <!-- Board Generation -->
+      <section id="page-board" class="page">
+        <h2>ChArUco Board Generation</h2>
+        <div class="info-text">
+          Generate a printable ChArUco board for camera calibration. A larger board gives more visible corners and better coverage, but keep the print flat, sharp, and printed at 100% scale. For intrinsics, an A4 or A3 board is often easier to move around the bed and tilt through different poses.
+        </div>
+        <div class="row">
+          <div class="col">
+            <div class="field-group">
+              <label>Board Name</label>
+              <input id="boardName" type="text" value="A4 30mm DICT_4X4_250 full-page ChArUco" />
+            </div>
+            <div class="field-group">
+              <label>Paper Size</label>
+              <select id="paperSize">
+                <option value="a4">A4 (210×297mm)</option>
+                <option value="a3">A3 (297×420mm)</option>
+                <option value="custom">Custom</option>
+              </select>
+            </div>
+            <div class="field-group" id="customPaperFields" style="display:none">
+              <label>Width (mm)</label><input id="paperW" type="number" value="210" />
+              <label>Height (mm)</label><input id="paperH" type="number" value="297" />
+            </div>
+            <div class="field-group">
+              <label>Square Size</label>
+              <select id="squareSize">
+                <option value="20">20mm</option>
+                <option value="30" selected>30mm</option>
+                <option value="40">40mm</option>
+                <option value="50">50mm</option>
+              </select>
+            </div>
+            <div class="field-group">
+              <label>Dictionary</label>
+              <select id="dictSelect">
+                <option>DICT_4X4_50</option>
+                <option>DICT_4X4_100</option>
+                <option selected>DICT_4X4_250</option>
+                <option>DICT_4X4_1000</option>
+                <option>DICT_5X5_50</option>
+                <option>DICT_5X5_250</option>
+                <option>DICT_5X5_1000</option>
+                <option>DICT_6X6_250</option>
+                <option>DICT_7X7_250</option>
+              </select>
+            </div>
+            <label><input type="checkbox" id="fullPage" checked /> Full page (minimal margins)</label>
+            <div id="boardInfo" class="info-text"></div>
+            <button id="genBoardBtn" class="btn">Generate Board</button>
+            <div class="field-group">
+              <label>Saved Boards</label>
+              <select id="boardLibrarySelect"><option value="">No generated boards yet</option></select>
+            </div>
+            <button id="printBoardBtn" class="btn" disabled>Print Selected Board</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Intrinsics Calibration -->
+      <section id="page-intrinsics" class="page">
+        <h2>Camera Calibration (Intrinsics)</h2>
+        <div class="info-text">
+          Intrinsics calibration measures the camera lens model: focal length, optical center, and distortion. Capture at least 6 usable frames; 10-12 is a better target, and 15 is worthwhile for wide or inexpensive lenses. Keep the same resolution, focus, zoom, and camera mount after calibration.
+        </div>
+        <div class="info-text">
+          Use varied board poses: center, edges, corners, rotated, and slightly tilted toward/away from the camera. A full-bed ChArUco board is useful for coverage and later bed homography, but still mix in A4/A3 shots around the edges and corners if you can move them. Flat, centered repeats are weak calibration data.
+        </div>
+        <div class="preview-wrap"><img id="intrPreview" /></div>
+        <div class="field-group">
+          <label>Board in Current Capture</label>
+          <select id="intrBoardSelect"><option value="">Generate a board first</option></select>
+        </div>
+        <div class="row">
+          <button id="captureIntrBtn" class="btn">Capture Frame</button>
+          <span id="intrFrameCount">0 frames</span>
+          <button id="computeIntrBtn" class="btn" disabled>Compute Intrinsics</button>
+          <button id="clearIntrBtn" class="btn">Clear Frames</button>
+        </div>
+        <div id="intrResult" class="info-text"></div>
+        <div class="calibration-summary">
+          <div class="summary-grid">
+            <div><span class="metric-label">Mean fit</span><strong id="intrMeanError">—</strong></div>
+            <div><span class="metric-label">Max frame</span><strong id="intrMaxError">—</strong></div>
+            <div><span class="metric-label">Bed scale</span><strong id="intrScale">Define bed area</strong></div>
+          </div>
+        </div>
+        <table class="data-table" id="intrFramesTable">
+          <thead>
+            <tr>
+              <th>Frame</th>
+              <th>Board</th>
+              <th>Corners</th>
+              <th>Error</th>
+              <th>Quality</th>
+              <th>Flags</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="intrFramesBody">
+            <tr><td colspan="7" class="empty-cell">No calibration frames captured yet.</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <!-- Bed Calibration -->
+      <section id="page-bed" class="page">
+        <h2>Bed Calibration (Homography)</h2>
+        <p>Place the ChArUco board flat on the CNC bed.</p>
+        <div class="preview-wrap"><img id="bedPreview" /></div>
+        <div class="row">
+          <button id="captureBedBtn" class="btn">Capture Bed Frame</button>
+          <div class="field-group">
+            <label>Origin Corner</label>
+            <select id="originCorner">
+              <option value="TopRight">Top Right</option>
+              <option value="TopLeft">Top Left</option>
+              <option value="BottomRight">Bottom Right</option>
+              <option value="BottomLeft">Bottom Left</option>
+            </select>
+          </div>
+          <label><input type="checkbox" id="swapXY" /> Swap X/Y</label>
+        </div>
+        <div class="row">
+          <div class="field-group"><label>Offset X (mm)</label><input id="offsetX" type="number" value="0" /></div>
+          <div class="field-group"><label>Offset Y (mm)</label><input id="offsetY" type="number" value="0" /></div>
+        </div>
+        <h3>Workspace Bounds</h3>
+        <div class="row">
+          <div class="field-group"><label>X Min</label><input id="wsXMin" type="number" value="-560" /></div>
+          <div class="field-group"><label>X Max</label><input id="wsXMax" type="number" value="0" /></div>
+          <div class="field-group"><label>Y Min</label><input id="wsYMin" type="number" value="-430" /></div>
+          <div class="field-group"><label>Y Max</label><input id="wsYMax" type="number" value="0" /></div>
+        </div>
+        <div id="bedResult" class="info-text"></div>
+      </section>
+
+      <!-- Calibration Test -->
+      <section id="page-test" class="page">
+        <h2>Calibration Test</h2>
+        <div class="preview-wrap"><img id="testPreview" /></div>
+        <div id="testResult" class="info-text"></div>
+        <button id="confirmTestBtn" class="btn">Confirm & Proceed to Scanning</button>
+      </section>
+
+      <!-- Scanning -->
+      <section id="page-scan" class="page">
+        <h2>Scanning</h2>
+        <div class="row">
+          <div class="col">
+            <div class="field-group">
+              <label>Detection Profile</label>
+              <select id="profileSelect"></select>
+            </div>
+            <div class="field-group">
+              <label>Object Height (mm)</label>
+              <input id="objHeight" type="number" value="0" step="0.1" />
+            </div>
+            <div class="field-group">
+              <label>Camera Height (mm)</label>
+              <input id="camHeight" type="number" value="" placeholder="Required for parallax" />
+            </div>
+            <div id="parallaxWarn" class="warn" style="display:none">Camera height required for parallax correction</div>
+            <button id="scanOnceBtn" class="btn">Scan Once</button>
+            <label><input type="checkbox" id="continuousScan" /> Continuous</label>
+            <div class="field-group">
+              <label>Interval (s)</label>
+              <input id="scanInterval" type="number" value="30" min="5" />
+            </div>
+          </div>
+          <div class="col preview-col">
+            <div class="preview-wrap"><img id="scanPreview" /></div>
+          </div>
+        </div>
+        <div id="scanStatus" class="info-text"></div>
+        <div id="viewportToggle">
+          <label><input type="checkbox" id="show3d" checked /> Show 3D Viewport</label>
+        </div>
+        <div id="viewport3d" class="viewport-container">
+          <canvas id="threeCanvas"></canvas>
+        </div>
+      </section>
+    </main>
+    <footer id="statusBar">
+      <span id="statusCamera">Camera: —</span>
+      <span id="statusWs">WS: —</span>
+    </footer>
+  </div>
+  <div id="frameModal" class="modal" hidden>
+    <div class="modal-backdrop" id="frameModalClose"></div>
+    <div class="modal-panel">
+      <div class="modal-toolbar">
+        <strong id="frameModalTitle">Calibration Frame</strong>
+        <button class="btn-sm" id="frameModalCloseBtn">Close</button>
+      </div>
+      <img id="frameModalImg" alt="Calibration frame" />
+    </div>
+  </div>
+  <script src="app.js" type="module"></script>
+</body>
+</html>

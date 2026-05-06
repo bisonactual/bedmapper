@@ -1,0 +1,59 @@
+# Rust / Cargo
+/target/
+/src-tauri/target/
+/src-tauri/.cargo/
+**/*.rs.bk
+
+# Tauri bundles and local resources generated during packaging
+/src-tauri/bundle/
+/src-tauri/resources/vision/*
+!/src-tauri/resources/vision/.gitkeep
+
+# Native sidecar build output
+/src-native/bedmapper-vision/
+/src-native/bedmapper-vision/**
+!/src-native/README.md
+/src-native/**/build/
+/src-native/**/out/
+/src-native/**/.cache/
+compile_commands.json
+
+# Node / frontend dependencies and caches
+node_modules/
+**/node_modules/
+/.npm/
+/.yarn/
+/.pnpm-store/
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Environment and local config
+.env
+.env.*
+!.env.example
+*.local
+
+# Editor and OS files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*.orig
+
+# Large local/generated captures
+/data/captures/
+/captures/
